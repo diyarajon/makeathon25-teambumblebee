@@ -1,0 +1,76 @@
+#include <Wire.h> 
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define OLED_ADDR   0x3C
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
+
+// Reminder settings
+const char* reminders[] = {"Drink Water", "Stretch", "Pomodoro Time"};
+const int numReminders = sizeof(reminders) / sizeof(reminders[0]);
+int currentReminder = 0;
+
+// Pomodoro timer settings
+unsigned long pomodoroDuration = 25 * 60 * 1000UL; // 25 minutes
+unsigned long pomodoroStart = 0;
+bool pomodoroRunning = false;
+
+// Timing for reminders cycling
+unsigned long lastReminderChange = 0;
+unsigned long reminderInterval = 10000; // 10 seconds per reminder
+
+void setup() {
+  display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+  display.setTextSize(2);
+  display.setCursor(0, 0);
+  display.println("Hi!");
+  display.display();
+
+  delay(2000); // Show welcome message for 2 seconds
+  display.clearDisplay();
+  pomodoroStart = millis(); // start first Pomodoro timer
+  pomodoroRunning = true;
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  // Update reminder every reminderInterval
+  if (now - lastReminderChange > reminderInterval) {
+    currentReminder++;
+    if (currentReminder >= numReminders) currentReminder = 0;
+    lastReminderChange = now;
+  }
+
+  // Clear display and show current reminder
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.setTextSize(2);
+
+  if (pomodoroRunning && strcmp(reminders[currentReminder], "Pomodoro Time") == 0) {
+    // Show Pomodoro countdown
+    unsigned long elapsed = now - pomodoroStart;
+    unsigned long remaining = (elapsed < pomodoroDuration) ? (pomodoroDuration - elapsed) : 0;
+
+    unsigned int minutes = remaining / 60000;
+    unsigned int seconds = (remaining % 60000) / 1000;
+
+    display.print("Pomodoro:");
+    display.setCursor(0, 30);
+    display.print(minutes);
+    display.print(":");
+    if (seconds < 10) display.print("0");
+    display.print(seconds);
+
+    if (remaining == 0) {
+      pomodoroRunning = false; // Pomodoro done
+    }
+  } else {
+    // Just show reminder text
+    display.println(reminders[currentReminder]);
+  }
+
+  display.display();
+}
